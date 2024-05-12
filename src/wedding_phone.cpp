@@ -50,18 +50,14 @@
 
 
 // GLOBALS
-AudioSynthWaveform     waveform1;
+AudioSynthWaveform    sine_wave;
 AudioInputI2S         i2s2;
-AudioPlaySdRaw        playRaw1;
-AudioPlaySdWav        playWav1;
 
 AudioRecordQueue      queue1;
-AudioMixer4            mixer;
+AudioMixer4           mixer;
 AudioOutputI2S        i2s1;
 
-AudioConnection       patchCord1(waveform1, 0, mixer, 0);
-AudioConnection       patchCord2(playRaw1, 0, mixer, 1);
-AudioConnection       patchCord3(playWav1, 0, mixer, 1);
+AudioConnection       patchCord1(sine_wave, 0, mixer, 0);
 AudioConnection       patchCord4(mixer, 0, i2s1, 0);
 AudioConnection       patchCord5(i2s2, 0, queue1,0);
 AudioControlSGTL5000  sgt15000_1;
@@ -122,9 +118,13 @@ setup_sd_card ()
 {
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
+
+  // Keep attempting to setup SD card until power goes out or it is inserted.
   while (!(SD.begin(SDCARD_CS_PIN))) 
   {
     Serial.println("Unable to access the SD Card");
+
+    // Flash the Setup LED to indicate there's an issue with the phone.
     digitalWrite(SETUP_LED, HIGH);
     delay(500);
     digitalWrite(SETUP_LED, LOW);
@@ -148,16 +148,16 @@ play_welcome_tone()
 {
   for (int i=0;i<4;i++) {
     if (i == 3 || i == 7) {
-      waveform1.frequency(880);
+      sine_wave.frequency(880);
     }
     else {
-      waveform1.frequency(440);
+      sine_wave.frequency(440);
     }
-    waveform1.amplitude(0.9);
+    sine_wave.amplitude(0.9);
     Serial.println("Waiting 250...");
     delay(250);
     Serial.println("Setting Amplitude 0...");
-    waveform1.amplitude(0);
+    sine_wave.amplitude(0);
     Serial.println("Waiting 250...");
     delay(250);
   }
@@ -168,16 +168,16 @@ play_end_tone()
 {
   for (int i=0;i<4;i++) {
     if (i == 3 || i == 7) {
-      waveform1.frequency(440);
+      sine_wave.frequency(440);
     }
     else {
-      waveform1.frequency(880);
+      sine_wave.frequency(880);
     }
-    waveform1.amplitude(0.9);
+    sine_wave.amplitude(0.9);
     Serial.println("Waiting 250...");
     delay(250);
     Serial.println("Setting Amplitude 0...");
-    waveform1.amplitude(0);
+    sine_wave.amplitude(0);
     Serial.println("Waiting 250...");
     delay(250);
   }
@@ -249,10 +249,14 @@ continue_recording(File *file)
   if (queue1.available() >= 16) {
     // Serial.println("Queue1.Available >= 2");
     byte buffer[512];
+
+    // TODO: Find out why this is split into two 256 chunks instead of one
+    // 512 chunk.
     memcpy(buffer, queue1.readBuffer(), 256);
     queue1.freeBuffer();
     memcpy(buffer+256, queue1.readBuffer(), 256);
     queue1.freeBuffer();
+
     file->write(buffer, sizeof(buffer));
     // Serial.printf("\rFile Size: %d\r", frec.size());
   }
@@ -269,6 +273,7 @@ stop_recording(File *file)
     file->write((byte*)queue1.readBuffer(), 256);
     queue1.freeBuffer();
   }
+
   Serial.println("Writing Finished.");
   file->close();
 
