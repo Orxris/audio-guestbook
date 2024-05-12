@@ -219,18 +219,21 @@ wait(unsigned int milliseconds)
     buttonPlay.update();
     if (HANDSET_DOWN) {
       Serial.println("Button (pin 0) Press");
+      return;
     }
     //if (buttonPlay.fallingEdge()) {
     //  Serial.println("Button (pin 1) Press");
     //}
     if (HANDSET_UP) {
       Serial.println("Button (pin 0) Release");
+      return;
     }
     //if (buttonPlay.risingEdge()) {
     //  Serial.println("Button (pin 1) Release");
     //}
   }
 }
+
 
 File
 *start_recording(File *file)
