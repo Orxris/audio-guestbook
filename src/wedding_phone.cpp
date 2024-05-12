@@ -1,9 +1,13 @@
 /*
- *
- *
+ *            Audio Guestbook
+ *        
+ *        Author: Jonathan Pennell
+ *         Board: Teensy 4.0
  *
  */
 
+
+// This can be removed when converting the file to an Arduino IDE .ino file.
 #include <Arduino.h>
 
 #include <Bounce.h>
@@ -59,8 +63,7 @@ AudioControlSGTL5000  sgt15000_1;
  */ 
 
 
-// Moved char filename[15] to startRecording()
-File frec;
+File *file;
 File root_dir = SD.open("/");
 
 Bounce buttonRecord = Bounce(HOOK_PIN, 80);
@@ -74,7 +77,7 @@ Mode mode = Mode::Initialising;
  *
  */
 void
-printDirectory(File dir, int numTabs)
+printDirectory(File dir)
 {
   char filename[15];
   File current_file;
@@ -171,180 +174,28 @@ play_end_tone()
 }
 
 
-char
-get_next_filename()
+File
+*get_next_file()
 {
-  char *filename;
+  char filename[15];
+  
   Serial.println("Root Dir at time of starting recording.");
-  printDirectory(root_dir, 0);
+  printDirectory(root_dir);
+
 	for (uint8_t i=0; i<9999;i++) {
 		snprintf(filename, 11, " %05d.RAW", i);
 		if (!SD.exists(filename)) {
 			break;
 		}
 	}
-  return filename;
-}
+  File *next_file = &SD.open(filename);
 
-
-void
-setup ()
-{
-
-  Serial.begin(9600);
-  Serial.println(__FILE__ __DATE__);
- 
-  Serial.println("Setting up Pins...");
-  setup_pins();
-  Serial.println("Set up Pins.");
-
-  Serial.println("Setting AudioMemory...");
-	AudioMemory(60);
-  Serial.println("Setting AudioMemory Finished.");
-
-  Serial.println("Setting sgt15000...");
-  setup_sgt15000();
-  Serial.println("Setting sgt15000 finished.");
-
-  Serial.println("Setting SD Card stuff...");
-  setup_sd_card();
-  Serial.println("Setting SD Card stuff Finished.");
-
-  /* From the TimeLib Library,
-   */
-	setSyncProvider(getTeensy3Time);
-
-	FsDateTime::setCallback(dateTime);
-
-  Serial.println("Setting Mode to Ready...");
-	mode = Mode::Ready;
-  
-  digitalWrite(SETUP_LED, HIGH);
-  Serial.println("Finished Setup.");
-}
-
-
-void
-loop()
-{
-
-	buttonRecord.update();
-	buttonPlay.update();
-
-	switch(mode) {
-
-    case Mode::Initialising:
-      Serial.println("Current Mode: Initialising...");
-      Serial.println("Teensy is in main loop, initialisation should have finished.");
-      Serial.println("Something unexpected has happened.
-      break;
-
-		case Mode::Ready:
-			if (HANDSET_UP) {
-        Serial.println("Root Dir at time of printing.");
-        printDirectory(root_dir, 0);
-				Serial.println("Handset Lifted");
-				Serial.println("Changing Mode to Prompting...");
-        mode = Mode::Prompting;
-			}
-			else if (buttonPlay.fallingEdge()) {
-				playAllRecordings();
-			}
-			break;
-
-		case Mode::Prompting:
-			wait(100);
-			Serial.println("Starting Recording");
-      			startRecording();
-			break;
-
-		case Mode::Recording:
-      // Swapped to rising edge
-			if (HANDSET_DOWN) {
-				Serial.println("Stopped Recording");
-				stopRecording();
-			  play_end_tone();
-      }
-      else {
-				continueRecording();
-			}
-			break;
-
-		case Mode::Playing:
-			break;
-	}
-}
-
-void
-startRecording()
-{
-  char[15] filename = get_next_filename();
-
-	frec = SD.open(filename, FILE_WRITE);
-	
-  if (!frec) {
+  if (file == NULL) {
 		Serial.println("Couldn't open a file to record!");
     return;
   }
 
-  Serial.printf("Recording to %s.\n", filename);
-  Serial.println("Changing Mode to Recording...");
-  mode = Mode::Recording;
-  digitalWrite(RECORDING_LED, HIGH);
-  queue1.begin();
-}
-
-
-void
-continueRecording()
-{
-	if (queue1.available() >= 16) {
-    // Serial.println("Queue1.Available >= 2");
-		byte buffer[512];
-		memcpy(buffer, queue1.readBuffer(), 256);
-		queue1.freeBuffer();
-		memcpy(buffer+256, queue1.readBuffer(), 256);
-		queue1.freeBuffer();
-		frec.write(buffer, sizeof(buffer));
-    // Serial.printf("\rFile Size: %d\r", frec.size());
-	}
-}
-
-void
-stopRecording()
-{
-  Serial.println("Root Dir at time of stopping recording");
-  printDirectory(root_dir, 0);
-	queue1.end();
-	while (queue1.available() > 0) {
-		frec.write((byte*)queue1.readBuffer(), 256);
-		queue1.freeBuffer();
-	}
-  Serial.println("Writing Finished.");
-	frec.close();
-  Serial.println("File Closed.");
-  Serial.println("Changing Mode to Ready...");
-	mode = Mode::Ready;
-  Serial.println("Setting Recording Light Off.");
-  digitalWrite(RECORDING_LED, LOW);
-  Serial.println("Root Dir at time of file closed.");
-  printDirectory(root_dir, 0);
-}
-
-
-
-time_t
-getTeensy3Time()
-{
-	return Teensy3Clock.get();
-}
-
-void
-dateTime(uint16_t* date, uint16_t* time, uint8_t* ms10)
-{
-	*date = FS_DATE(year(), month(), day());
-	*time = FS_TIME(hour(), minute(), second());
-	*ms10 = second() & 1 ? 100 : 0;
+  return next_file;
 }
 
 
@@ -371,3 +222,145 @@ wait(unsigned int milliseconds)
 	}
 }
 
+File
+*start_recording(File *file)
+{
+  Serial.printf("Recording to %s.\n", file->name());
+  Serial.println("Changing Mode to Recording...");
+  mode = Mode::Recording;
+  digitalWrite(RECORDING_LED, HIGH);
+  queue1.begin();
+}
+
+
+void
+continue_recording(File *file)
+{
+	if (queue1.available() >= 16) {
+    // Serial.println("Queue1.Available >= 2");
+		byte buffer[512];
+		memcpy(buffer, queue1.readBuffer(), 256);
+		queue1.freeBuffer();
+		memcpy(buffer+256, queue1.readBuffer(), 256);
+		queue1.freeBuffer();
+		file->write(buffer, sizeof(buffer));
+    // Serial.printf("\rFile Size: %d\r", frec.size());
+	}
+}
+
+
+void
+stop_recording(File *file)
+{
+  Serial.println("Root Dir at time of stopping recording");
+  printDirectory(root_dir);
+	queue1.end();
+	while (queue1.available() > 0) {
+		file->write((byte*)queue1.readBuffer(), 256);
+		queue1.freeBuffer();
+	}
+  Serial.println("Writing Finished.");
+	file->close();
+
+  Serial.println("File Closed.");
+  Serial.println("Changing Mode to Ready...");
+	
+  Serial.println("Setting Recording Light Off.");
+  digitalWrite(RECORDING_LED, LOW);
+
+  mode = Mode::Ready;
+  
+  Serial.println("Root Dir at time of file closed.");
+  printDirectory(root_dir);
+
+}
+
+
+void
+dateTime(uint16_t* date, uint16_t* time, uint8_t* ms10)
+{
+	*date = FS_DATE(year(), month(), day());
+	*time = FS_TIME(hour(), minute(), second());
+	*ms10 = second() & 1 ? 100 : 0;
+}
+
+
+void
+setup ()
+{
+
+  Serial.begin(9600);
+  Serial.println(__FILE__ __DATE__);
+ 
+  Serial.println("Setting up Pins...");
+  setup_pins();
+  Serial.println("Set up Pins.");
+
+  Serial.println("Setting AudioMemory...");
+	AudioMemory(60);
+  Serial.println("Setting AudioMemory Finished.");
+
+  Serial.println("Setting sgt15000...");
+  setup_sgt15000();
+  Serial.println("Setting sgt15000 finished.");
+
+  Serial.println("Setting SD Card stuff...");
+  setup_sd_card();
+  Serial.println("Setting SD Card stuff Finished.");
+
+  Serial.println("Setting Mode to Ready...");
+	mode = Mode::Ready;
+  
+  digitalWrite(SETUP_LED, HIGH);
+  Serial.println("Finished Setup.");
+}
+
+
+void
+loop()
+{
+
+	buttonRecord.update();
+	buttonPlay.update();
+
+	switch(mode) {
+
+    case Mode::Initialising:
+      Serial.println("Current Mode: Initialising...");
+      Serial.println("Teensy is in main loop, initialisation should have finished.");
+      Serial.println("Something unexpected has happened.");
+      break;
+
+		case Mode::Ready:
+			if (HANDSET_UP) {
+        Serial.println("Root Dir at time of printing.");
+        printDirectory(root_dir);
+				Serial.println("Handset Lifted");
+				Serial.println("Changing Mode to Prompting...");
+        mode = Mode::Prompting;
+			}
+			break;
+
+		case Mode::Prompting:
+			wait(100);
+			Serial.println("Starting Recording");
+      file = get_next_file();
+      start_recording(file);
+			break;
+
+		case Mode::Recording:
+      // Swapped to rising edge
+			if (HANDSET_DOWN) {
+				Serial.println("Stopped Recording");
+				stop_recording(file);
+			  play_end_tone();
+      }
+      else {
+				continue_recording(file);
+			}
+			break;
+
+		case Mode::Playing:
+			break;
+	}
+}
