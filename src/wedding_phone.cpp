@@ -42,14 +42,14 @@
 
 
 // GLOBALS
-AudioSynthWaveform 	  waveform1;
-AudioInputI2S 		    i2s2;
-AudioPlaySdRaw		    playRaw1;
-AudioPlaySdWav		    playWav1;
+AudioSynthWaveform     waveform1;
+AudioInputI2S         i2s2;
+AudioPlaySdRaw        playRaw1;
+AudioPlaySdWav        playWav1;
 
-AudioRecordQueue	    queue1;
-AudioMixer4		        mixer;
-AudioOutputI2S		    i2s1;
+AudioRecordQueue      queue1;
+AudioMixer4            mixer;
+AudioOutputI2S        i2s1;
 
 AudioConnection       patchCord1(waveform1, 0, mixer, 0);
 AudioConnection       patchCord2(playRaw1, 0, mixer, 1);
@@ -82,15 +82,15 @@ printDirectory(File dir)
   char filename[15];
   File current_file;
   for (uint8_t i=0; i<9999;i++) {
-		snprintf(filename, 11, " %05d.RAW", i);
-		if (SD.exists(filename)) {
-			current_file = SD.open(filename);
+    snprintf(filename, 11, " %05d.RAW", i);
+    if (SD.exists(filename)) {
+      current_file = SD.open(filename);
       Serial.printf("File: %s, Size: %d\n", filename, current_file.size());
-		}
+    }
     else {
       break;
     }
-	}
+  }
 }
 
 
@@ -99,8 +99,8 @@ setup_pins ()
 {
   pinMode(SETUP_LED, OUTPUT);
   pinMode(RECORDING_LED, OUTPUT);
-	pinMode(HOOK_PIN, INPUT_PULLUP);
-	pinMode(PLAYBACK_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(HOOK_PIN, INPUT_PULLUP);
+  pinMode(PLAYBACK_BUTTON_PIN, INPUT_PULLUP);
 
   digitalWrite(SETUP_LED, LOW);
   digitalWrite(RECORDING_LED, LOW);
@@ -110,26 +110,26 @@ setup_pins ()
 void
 setup_sd_card ()
 {
-	SPI.setMOSI(SDCARD_MOSI_PIN);
-	SPI.setSCK(SDCARD_SCK_PIN);
-	while (!(SD.begin(SDCARD_CS_PIN))) 
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  while (!(SD.begin(SDCARD_CS_PIN))) 
   {
-		Serial.println("Unable to access the SD Card");
+    Serial.println("Unable to access the SD Card");
     digitalWrite(SETUP_LED, HIGH);
-		delay(500);
+    delay(500);
     digitalWrite(SETUP_LED, LOW);
     delay(500);
-	}
+  }
 }
 
 
 void
 setup_sgt15000 () 
 {
-	sgt15000_1.enable();
-	sgt15000_1.inputSelect(AUDIO_INPUT_MIC);
-	sgt15000_1.volume(0.5);
-	sgt15000_1.micGain(5);
+  sgt15000_1.enable();
+  sgt15000_1.inputSelect(AUDIO_INPUT_MIC);
+  sgt15000_1.volume(0.5);
+  sgt15000_1.micGain(5);
 }
 
 
@@ -182,16 +182,16 @@ File
   Serial.println("Root Dir at time of starting recording.");
   printDirectory(root_dir);
 
-	for (uint8_t i=0; i<9999;i++) {
-		snprintf(filename, 11, " %05d.RAW", i);
-		if (!SD.exists(filename)) {
-			break;
-		}
-	}
+  for (uint8_t i=0; i<9999;i++) {
+    snprintf(filename, 11, " %05d.RAW", i);
+    if (!SD.exists(filename)) {
+      break;
+    }
+  }
   File *next_file = &SD.open(filename);
 
   if (file == NULL) {
-		Serial.println("Couldn't open a file to record!");
+    Serial.println("Couldn't open a file to record!");
     return;
   }
 
@@ -202,24 +202,24 @@ File
 void
 wait(unsigned int milliseconds)
 {
-	elapsedMillis msec = 0;
+  elapsedMillis msec = 0;
 
-	while (msec <= milliseconds) {
-		buttonRecord.update();
-		buttonPlay.update();
-		if (HANDSET_DOWN) {
-			Serial.println("Button (pin 0) Press");
-		}
-		//if (buttonPlay.fallingEdge()) {
-		//	Serial.println("Button (pin 1) Press");
-		//}
-		if (HANDSET_UP) {
-			Serial.println("Button (pin 0) Release");
-		}
-		//if (buttonPlay.risingEdge()) {
-		//	Serial.println("Button (pin 1) Release");
-		//}
-	}
+  while (msec <= milliseconds) {
+    buttonRecord.update();
+    buttonPlay.update();
+    if (HANDSET_DOWN) {
+      Serial.println("Button (pin 0) Press");
+    }
+    //if (buttonPlay.fallingEdge()) {
+    //  Serial.println("Button (pin 1) Press");
+    //}
+    if (HANDSET_UP) {
+      Serial.println("Button (pin 0) Release");
+    }
+    //if (buttonPlay.risingEdge()) {
+    //  Serial.println("Button (pin 1) Release");
+    //}
+  }
 }
 
 File
@@ -236,16 +236,16 @@ File
 void
 continue_recording(File *file)
 {
-	if (queue1.available() >= 16) {
+  if (queue1.available() >= 16) {
     // Serial.println("Queue1.Available >= 2");
-		byte buffer[512];
-		memcpy(buffer, queue1.readBuffer(), 256);
-		queue1.freeBuffer();
-		memcpy(buffer+256, queue1.readBuffer(), 256);
-		queue1.freeBuffer();
-		file->write(buffer, sizeof(buffer));
+    byte buffer[512];
+    memcpy(buffer, queue1.readBuffer(), 256);
+    queue1.freeBuffer();
+    memcpy(buffer+256, queue1.readBuffer(), 256);
+    queue1.freeBuffer();
+    file->write(buffer, sizeof(buffer));
     // Serial.printf("\rFile Size: %d\r", frec.size());
-	}
+  }
 }
 
 
@@ -254,17 +254,17 @@ stop_recording(File *file)
 {
   Serial.println("Root Dir at time of stopping recording");
   printDirectory(root_dir);
-	queue1.end();
-	while (queue1.available() > 0) {
-		file->write((byte*)queue1.readBuffer(), 256);
-		queue1.freeBuffer();
-	}
+  queue1.end();
+  while (queue1.available() > 0) {
+    file->write((byte*)queue1.readBuffer(), 256);
+    queue1.freeBuffer();
+  }
   Serial.println("Writing Finished.");
-	file->close();
+  file->close();
 
   Serial.println("File Closed.");
   Serial.println("Changing Mode to Ready...");
-	
+  
   Serial.println("Setting Recording Light Off.");
   digitalWrite(RECORDING_LED, LOW);
 
@@ -279,9 +279,9 @@ stop_recording(File *file)
 void
 dateTime(uint16_t* date, uint16_t* time, uint8_t* ms10)
 {
-	*date = FS_DATE(year(), month(), day());
-	*time = FS_TIME(hour(), minute(), second());
-	*ms10 = second() & 1 ? 100 : 0;
+  *date = FS_DATE(year(), month(), day());
+  *time = FS_TIME(hour(), minute(), second());
+  *ms10 = second() & 1 ? 100 : 0;
 }
 
 
@@ -297,7 +297,7 @@ setup ()
   Serial.println("Set up Pins.");
 
   Serial.println("Setting AudioMemory...");
-	AudioMemory(60);
+  AudioMemory(60);
   Serial.println("Setting AudioMemory Finished.");
 
   Serial.println("Setting sgt15000...");
@@ -309,7 +309,7 @@ setup ()
   Serial.println("Setting SD Card stuff Finished.");
 
   Serial.println("Setting Mode to Ready...");
-	mode = Mode::Ready;
+  mode = Mode::Ready;
   
   digitalWrite(SETUP_LED, HIGH);
   Serial.println("Finished Setup.");
@@ -320,10 +320,10 @@ void
 loop()
 {
 
-	buttonRecord.update();
-	buttonPlay.update();
+  buttonRecord.update();
+  buttonPlay.update();
 
-	switch(mode) {
+  switch(mode) {
 
     case Mode::Initialising:
       Serial.println("Current Mode: Initialising...");
@@ -331,36 +331,36 @@ loop()
       Serial.println("Something unexpected has happened.");
       break;
 
-		case Mode::Ready:
-			if (HANDSET_UP) {
+    case Mode::Ready:
+      if (HANDSET_UP) {
         Serial.println("Root Dir at time of printing.");
         printDirectory(root_dir);
-				Serial.println("Handset Lifted");
-				Serial.println("Changing Mode to Prompting...");
+        Serial.println("Handset Lifted");
+        Serial.println("Changing Mode to Prompting...");
         mode = Mode::Prompting;
-			}
-			break;
+      }
+      break;
 
-		case Mode::Prompting:
-			wait(100);
-			Serial.println("Starting Recording");
+    case Mode::Prompting:
+      wait(100);
+      Serial.println("Starting Recording");
       file = get_next_file();
       start_recording(file);
-			break;
+      break;
 
-		case Mode::Recording:
+    case Mode::Recording:
       // Swapped to rising edge
-			if (HANDSET_DOWN) {
-				Serial.println("Stopped Recording");
-				stop_recording(file);
-			  play_end_tone();
+      if (HANDSET_DOWN) {
+        Serial.println("Stopped Recording");
+        stop_recording(file);
+        play_end_tone();
       }
       else {
-				continue_recording(file);
-			}
-			break;
+        continue_recording(file);
+      }
+      break;
 
-		case Mode::Playing:
-			break;
-	}
+    case Mode::Playing:
+      break;
+  }
 }
