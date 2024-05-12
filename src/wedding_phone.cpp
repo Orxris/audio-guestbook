@@ -18,17 +18,25 @@
 #include <TimeLib.h>
 
 
-// Define pins used by the teensy audio shield.
-// Define the SD Card Pins
+/* Define pins used by the teensy audio shield.
+ * Define the SD Card Pins as per: 
+ * https://www.pjrc.com/teensy/card10a_rev1_web.png
+ */
 #define SDCARD_CS_PIN 10
 #define SDCARD_MOSI_PIN 7
 #define SDCARD_SCK_PIN 14
 
-// Define the LED Pins
+/* Define the LED Pins
+ * These will differ based on your own setup, I have chosen to use pins 2 and 3
+ * for absolutely no reason. Change at your own will
+ */
 #define SETUP_LED 3
 #define RECORDING_LED 2
 
-// Define the required Input/Playback pins
+/* Define the required Input/Playback pins
+ * These will differ based on your own setup, I have chosen to use pins 2 and 3
+ * for absolutely no reason. Change at your own will
+ */
 #define HOOK_PIN 0
 #define PLAYBACK_BUTTON_PIN 1
 
@@ -74,7 +82,9 @@ Mode mode = Mode::Initialising;
 
 
 /*
- *
+ * Prints the root directory of the SD card to the serial output.
+ * For reasons unknown, adding this function in numerous places also
+ * fixed an issue where the final audio file was being truncated to 0 seconds.
  */
 void
 printDirectory(File dir)
