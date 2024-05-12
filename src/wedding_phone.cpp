@@ -103,11 +103,16 @@ printDirectory(File dir)
 void
 setup_pins ()
 {
+  /* SETUP_LED pin is on when phone is on and setup succeeds */
   pinMode(SETUP_LED, OUTPUT);
-  pinMode(RECORDING_LED, OUTPUT);
-  pinMode(HOOK_PIN, INPUT_PULLUP);
-  pinMode(PLAYBACK_BUTTON_PIN, INPUT_PULLUP);
 
+  /* RECORDING_LED is on when phone is recording */
+  pinMode(RECORDING_LED, OUTPUT);
+
+  /* HOOK_PIN is the headset up/down */
+  pinMode(HOOK_PIN, INPUT_PULLUP);
+
+  /* Setting LED pins to off */
   digitalWrite(SETUP_LED, LOW);
   digitalWrite(RECORDING_LED, LOW);
 }
@@ -144,42 +149,43 @@ setup_sgt15000 (AudioControlSGTL5000 *audio_codec)
 
 
 void
-play_welcome_tone()
+beep (AudioSynthWaveform *wave_form)
+{
+  wave_form->amplitude(0.9);
+  Serial.println("Waiting 250...");
+  delay(250);
+  Serial.println("Setting Amplitude 0...");
+  wave_form->amplitude(0);
+  Serial.println("Waiting 250...");
+  delay(250);
+}
+
+
+void
+play_start_tone(AudioSynthWaveform *wave_form)
 {
   for (int i=0;i<4;i++) {
     if (i == 3 || i == 7) {
-      sine_wave.frequency(880);
+      wave_form->frequency(880);
     }
     else {
-      sine_wave.frequency(440);
+      wave_form->frequency(440);
     }
-    sine_wave.amplitude(0.9);
-    Serial.println("Waiting 250...");
-    delay(250);
-    Serial.println("Setting Amplitude 0...");
-    sine_wave.amplitude(0);
-    Serial.println("Waiting 250...");
-    delay(250);
+    beep(wave_form);
   }
 }
 
 void
-play_end_tone()
+play_end_tone(AudioSynthWaveform *wave_form)
 {
   for (int i=0;i<4;i++) {
     if (i == 3 || i == 7) {
-      sine_wave.frequency(440);
+      wave_form->frequency(440);
     }
     else {
-      sine_wave.frequency(880);
+      wave_form->frequency(880);
     }
-    sine_wave.amplitude(0.9);
-    Serial.println("Waiting 250...");
-    delay(250);
-    Serial.println("Setting Amplitude 0...");
-    sine_wave.amplitude(0);
-    Serial.println("Waiting 250...");
-    delay(250);
+    beep(wave_form);
   }
 }
 
@@ -198,6 +204,7 @@ File
       break;
     }
   }
+
   File *next_file = &SD.open(filename);
 
   if (file == NULL) {
@@ -264,6 +271,7 @@ continue_recording(File *file)
   }
 }
 
+
 /* This function does a few things:
   1. Ends the audio recording queue.
   2. Saves the remaining data in the queue to the file.
@@ -277,7 +285,7 @@ stop_recording(File *file)
 
   mic_audio_queue.end();
   
-  Serial.printf("Bytes remaining in Queue: %d", mic_audio_queue.memory_used);
+  Serial.printf("Bytes remaining in Queue: %d", mic_audio_queue.available());
 
   while (mic_audio_queue.available() > 0) {
     file->write((byte*)mic_audio_queue.readBuffer(), 256);
@@ -299,6 +307,47 @@ stop_recording(File *file)
   printDirectory(root_dir);
 
 }
+
+
+/* Unused function, a rewrite of the three seperate recording functions.
+ * This implementation stays 'in' the record_audio function until the handset
+ * is down, rather than going back to the main loop.
+ */
+void
+record_audio(File *file, AudioRecordQueue *audio_queue)
+{
+
+  byte buffer[512];
+
+  audio_queue->begin();
+
+  while (!HANDSET_DOWN)
+  {
+    if (audio_queue->available() >= 16)
+    {
+      memcpy(buffer, audio_queue->readBuffer(), 512);
+      audio_queue->freeBuffer();
+
+      file->write(buffer, sizeof(buffer));
+    }
+
+    buttonRecord.update();
+
+  }
+
+  audio_queue->end();
+
+  while (audio_queue->available() > 0)
+  {
+    memcpy(buffer, audio_queue->readBuffer(), 256);
+    mic_audio_queue.freeBuffer();
+
+    file->write(buffer, sizeof(buffer));
+  }
+
+}
+
+
 
 
 void
@@ -348,9 +397,12 @@ loop()
       break;
 
     case Mode::Ready:
+      Serial.println("Waiting for handset to be lifted...");
+
       if (HANDSET_UP) {
         Serial.println("Root Dir at time of printing.");
         printDirectory(root_dir);
+        
         Serial.println("Handset Lifted");
         Serial.println("Changing Mode to Prompting...");
         mode = Mode::Prompting;
@@ -361,6 +413,7 @@ loop()
       wait(100);
       Serial.println("Starting Recording");
       file = get_next_file();
+      play_start_tone(&sine_wave);
       start_recording(file);
       break;
 
@@ -369,7 +422,7 @@ loop()
       if (HANDSET_DOWN) {
         Serial.println("Stopped Recording");
         stop_recording(file);
-        play_end_tone();
+        play_end_tone(&sine_wave);
       }
       else {
         continue_recording(file);
