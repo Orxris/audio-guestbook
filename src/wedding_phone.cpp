@@ -4,7 +4,6 @@
  *
  */
 
-
 #include <Arduino.h>
 
 #include <Bounce.h>
@@ -172,10 +171,10 @@ play_end_tone()
 }
 
 
-char[15]
+char
 get_next_filename()
 {
-  char filename[15];
+  char *filename;
   Serial.println("Root Dir at time of starting recording.");
   printDirectory(root_dir, 0);
 	for (uint8_t i=0; i<9999;i++) {
