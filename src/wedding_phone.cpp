@@ -60,7 +60,7 @@ AudioOutputI2S        i2s1;
 AudioConnection       patchCord1(sine_wave, 0, mixer, 0);
 AudioConnection       patchCord4(mixer, 0, i2s1, 0);
 AudioConnection       patchCord5(i2s2, 0, queue1,0);
-AudioControlSGTL5000  sgt15000_1;
+AudioControlSGTL5000  audio_codec;
 
 /* I've got no idea what the stuff above is doing
  * so it's best to not touch it unless you do...
@@ -136,10 +136,10 @@ setup_sd_card ()
 void
 setup_sgt15000 () 
 {
-  sgt15000_1.enable();
-  sgt15000_1.inputSelect(AUDIO_INPUT_MIC);
-  sgt15000_1.volume(0.5);
-  sgt15000_1.micGain(5);
+  audio_codec.enable();
+  audio_codec.inputSelect(AUDIO_INPUT_MIC);
+  audio_codec.volume(0.5);
+  audio_codec.micGain(5);
 }
 
 
