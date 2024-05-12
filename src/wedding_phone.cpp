@@ -51,16 +51,16 @@
 
 // GLOBALS
 AudioSynthWaveform    sine_wave;
-AudioInputI2S         i2s2;
+AudioInputI2S         I2S_input;
 
-AudioRecordQueue      queue1;
+AudioRecordQueue      mic_audio_queue;
 AudioMixer4           mixer;
-AudioOutputI2S        i2s1;
+AudioOutputI2S        I2S_output;
 
 AudioConnection       patchCord1(sine_wave, 0, mixer, 0);
-AudioConnection       patchCord4(mixer, 0, i2s1, 0);
-AudioConnection       patchCord5(i2s2, 0, queue1,0);
-AudioControlSGTL5000  audio_codec;
+AudioConnection       patchCord4(mixer, 0, I2S_output, 0);
+AudioConnection       patchCord5(I2S_input, 0, mic_audio_queue,0);
+AudioControlSGTL5000  sgt15000;
 
 /* I've got no idea what the stuff above is doing
  * so it's best to not touch it unless you do...
@@ -134,12 +134,12 @@ setup_sd_card ()
 
 
 void
-setup_sgt15000 () 
+setup_sgt15000 (AudioControlSGTL5000 *audio_codec) 
 {
-  audio_codec.enable();
-  audio_codec.inputSelect(AUDIO_INPUT_MIC);
-  audio_codec.volume(0.5);
-  audio_codec.micGain(5);
+  audio_codec->enable();
+  audio_codec->inputSelect(AUDIO_INPUT_MIC);
+  audio_codec->volume(0.5);
+  audio_codec->micGain(5);
 }
 
 
@@ -239,64 +239,62 @@ File
   Serial.println("Changing Mode to Recording...");
   mode = Mode::Recording;
   digitalWrite(RECORDING_LED, HIGH);
-  queue1.begin();
+  mic_audio_queue.begin();
 }
 
 
 void
 continue_recording(File *file)
 {
-  if (queue1.available() >= 16) {
-    // Serial.println("Queue1.Available >= 2");
+  if (mic_audio_queue.available() >= 16) {
+    // Serial.println("mic_audio_queue.Available >= 2");
     byte buffer[512];
 
     // TODO: Find out why this is split into two 256 chunks instead of one
     // 512 chunk.
-    memcpy(buffer, queue1.readBuffer(), 256);
-    queue1.freeBuffer();
-    memcpy(buffer+256, queue1.readBuffer(), 256);
-    queue1.freeBuffer();
+    memcpy(buffer, mic_audio_queue.readBuffer(), 256);
+    mic_audio_queue.freeBuffer();
+    memcpy(buffer+256, mic_audio_queue.readBuffer(), 256);
+    mic_audio_queue.freeBuffer();
 
     file->write(buffer, sizeof(buffer));
-    // Serial.printf("\rFile Size: %d\r", frec.size());
   }
 }
 
-
+/* This function does a few things:
+  1. Ends the audio recording queue.
+  2. Saves the remaining data in the queue to the file.
+  3. Turns off the recording light.
+*/
 void
 stop_recording(File *file)
 {
   Serial.println("Root Dir at time of stopping recording");
   printDirectory(root_dir);
-  queue1.end();
-  while (queue1.available() > 0) {
-    file->write((byte*)queue1.readBuffer(), 256);
-    queue1.freeBuffer();
+
+  mic_audio_queue.end();
+  
+  Serial.printf("Bytes remaining in Queue: %d", mic_audio_queue.memory_used);
+
+  while (mic_audio_queue.available() > 0) {
+    file->write((byte*)mic_audio_queue.readBuffer(), 256);
+    mic_audio_queue.freeBuffer();
   }
 
   Serial.println("Writing Finished.");
+  
   file->close();
-
   Serial.println("File Closed.");
-  Serial.println("Changing Mode to Ready...");
   
   Serial.println("Setting Recording Light Off.");
   digitalWrite(RECORDING_LED, LOW);
 
+  Serial.println("Changing Mode to Ready...");
   mode = Mode::Ready;
   
   Serial.println("Root Dir at time of file closed.");
   printDirectory(root_dir);
 
-}
-
-
-void
-dateTime(uint16_t* date, uint16_t* time, uint8_t* ms10)
-{
-  *date = FS_DATE(year(), month(), day());
-  *time = FS_TIME(hour(), minute(), second());
-  *ms10 = second() & 1 ? 100 : 0;
 }
 
 
@@ -316,7 +314,7 @@ setup ()
   Serial.println("Setting AudioMemory Finished.");
 
   Serial.println("Setting sgt15000...");
-  setup_sgt15000();
+  setup_sgt15000(&sgt15000);
   Serial.println("Setting sgt15000 finished.");
 
   Serial.println("Setting SD Card stuff...");
