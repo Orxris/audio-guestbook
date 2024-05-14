@@ -297,6 +297,9 @@ stop_recording(File *file)
   file->close();
   Serial.println("File Closed.");
   
+  Serial.println("Deleting File Object.");
+  delete &file;
+
   Serial.println("Setting Recording Light Off.");
   digitalWrite(RECORDING_LED, LOW);
 
