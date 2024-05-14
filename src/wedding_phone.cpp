@@ -84,7 +84,8 @@ enum Mode
   Ready,
   Prompting,
   Recording,
-  Playing
+  Playing,
+  Error
 };
 Mode mode = Mode::Initialising;
 
