@@ -272,6 +272,16 @@ continue_recording(File *file)
 }
 
 
+void
+empty_buffer(File *file)
+{
+  while (mic_audio_queue.available() > 0) {
+    file->write((byte*)mic_audio_queue.readBuffer(), 256);
+    mic_audio_queue.freeBuffer();
+  }
+}
+
+
 /* This function does a few things:
   1. Ends the audio recording queue.
   2. Saves the remaining data in the queue to the file.
@@ -286,12 +296,7 @@ stop_recording(File *file)
   mic_audio_queue.end();
   
   Serial.printf("Bytes remaining in Queue: %d", mic_audio_queue.available());
-
-  while (mic_audio_queue.available() > 0) {
-    file->write((byte*)mic_audio_queue.readBuffer(), 256);
-    mic_audio_queue.freeBuffer();
-  }
-
+  empty_buffer(file);
   Serial.println("Writing Finished.");
   
   file->close();
