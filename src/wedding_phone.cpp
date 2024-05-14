@@ -71,6 +71,10 @@ AudioControlSGTL5000  sgt15000;
 File *file;
 File root_dir = SD.open("/");
 
+/* Bounce helps us handle 'chatter' or 'bounce', where a single button press
+ * produces multiple 'presses' milliseconds apart.
+ * https://www.pjrc.com/teensy/td_libs_Bounce.html
+ */
 Bounce buttonRecord = Bounce(HOOK_PIN, 80);
 Bounce buttonPlay = Bounce(PLAYBACK_BUTTON_PIN, 40);
 
