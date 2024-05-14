@@ -90,6 +90,20 @@ enum Mode
 Mode mode = Mode::Initialising;
 
 
+void
+play_error_tone(int pattern[4])
+{
+
+}
+
+
+void
+error(int code)
+{
+
+}
+
+
 /*
  * Prints the root directory of the SD card to the serial output.
  * For reasons unknown, adding this function in numerous places also
