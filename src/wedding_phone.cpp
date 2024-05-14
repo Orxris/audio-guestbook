@@ -49,7 +49,7 @@
 #define HANDSET_DOWN   buttonRecord.risingEdge()
 
 
-// GLOBALS
+// AUDIO GLOBALS
 AudioSynthWaveform    sine_wave;
 AudioInputI2S         I2S_input;
 
@@ -73,7 +73,14 @@ File root_dir = SD.open("/");
 Bounce buttonRecord = Bounce(HOOK_PIN, 80);
 Bounce buttonPlay = Bounce(PLAYBACK_BUTTON_PIN, 40);
 
-enum Mode {Initialising, Ready, Prompting, Recording, Playing};
+enum Mode
+{
+  Initialising,
+  Ready,
+  Prompting,
+  Recording,
+  Playing
+};
 Mode mode = Mode::Initialising;
 
 
@@ -273,7 +280,7 @@ continue_recording(File *file)
 
 
 void
-empty_buffer(File *file)
+empty_queue(File *file)
 {
   while (mic_audio_queue.available() > 0) {
     file->write((byte*)mic_audio_queue.readBuffer(), 256);
@@ -296,7 +303,7 @@ stop_recording(File *file)
   mic_audio_queue.end();
   
   Serial.printf("Bytes remaining in Queue: %d", mic_audio_queue.available());
-  empty_buffer(file);
+  empty_queue(file);
   Serial.println("Writing Finished.");
   
   file->close();
