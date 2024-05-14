@@ -7,9 +7,10 @@
  */
 
 
-// This can be removed when converting the file to an Arduino IDE .ino file.
+/* This can be removed when converting the file to an Arduino IDE .ino file. */
 #include <Arduino.h>
 
+/* These imports need to stay, even after converting to a .ino file */
 #include <Bounce.h>
 #include <Audio.h>
 #include <Wire.h>
@@ -49,7 +50,7 @@
 #define HANDSET_DOWN   buttonRecord.risingEdge()
 
 
-// AUDIO GLOBALS
+/* AUDIO GLOBALS */
 AudioSynthWaveform    sine_wave;
 AudioInputI2S         I2S_input;
 
@@ -131,12 +132,12 @@ setup_sd_card ()
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
 
-  // Keep attempting to setup SD card until power goes out or it is inserted.
+  /* Keep attempting to setup SD card until power goes out or it is inserted. */
   while (!(SD.begin(SDCARD_CS_PIN))) 
   {
     Serial.println("Unable to access the SD Card");
 
-    // Flash the Setup LED to indicate there's an issue with the phone.
+    /* Flash the Setup LED to indicate there's an issue with the phone. */
     digitalWrite(SETUP_LED, HIGH);
     delay(500);
     digitalWrite(SETUP_LED, LOW);
@@ -150,7 +151,11 @@ setup_sgt15000 (AudioControlSGTL5000 *audio_codec)
 {
   audio_codec->enable();
   audio_codec->inputSelect(AUDIO_INPUT_MIC);
+
+  /* Increase this if the audio as a whole is too quiet */
   audio_codec->volume(0.5);
+
+  /* Lower this if you're struggling to hear over background noise */
   audio_codec->micGain(5);
 }
 
@@ -235,17 +240,19 @@ wait(unsigned int milliseconds)
       Serial.println("Button (pin 0) Press");
       return;
     }
-    //if (buttonPlay.fallingEdge()) {
-    //  Serial.println("Button (pin 1) Press");
-    //}
+    /*if (buttonPlay.fallingEdge()) {
+     *  Serial.println("Button (pin 1) Press");
+     * }
+     */    
     if (HANDSET_UP) {
       Serial.println("Button (pin 0) Release");
       return;
     }
-    //if (buttonPlay.risingEdge()) {
-    //  Serial.println("Button (pin 1) Release");
-    //}
-  }
+    /*if (buttonPlay.risingEdge()) {
+     *  Serial.println("Button (pin 1) Release");
+     *}
+     */
+    }
 }
 
 
@@ -264,11 +271,12 @@ void
 continue_recording(File *file)
 {
   if (mic_audio_queue.available() >= 16) {
-    // Serial.println("mic_audio_queue.Available >= 2");
+    /* Serial.println("mic_audio_queue.Available >= 2"); */
     byte buffer[512];
 
-    // TODO: Find out why this is split into two 256 chunks instead of one
-    // 512 chunk.
+    /* TODO: Find out why this is split into two 256 chunks instead of one
+     * 512 chunk.
+     */
     memcpy(buffer, mic_audio_queue.readBuffer(), 256);
     mic_audio_queue.freeBuffer();
     memcpy(buffer+256, mic_audio_queue.readBuffer(), 256);
@@ -433,7 +441,7 @@ loop()
       break;
 
     case Mode::Recording:
-      // Swapped to rising edge
+      /* Swapped to rising edge */
       if (HANDSET_DOWN) {
         Serial.println("Stopped Recording");
         stop_recording(file);
