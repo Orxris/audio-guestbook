@@ -93,14 +93,36 @@ Mode mode = Mode::Initialising;
 void
 play_error_tone(int pattern[4])
 {
-
+  /* pattern is an array of 0s and 1s, where a 1 represents a long beep
+   * and 0 a short beep.
+   */
+  AudioSynthWaveform wave_form;
+  for (int i=0; i<4;i++)
+  {
+    wave_form.amplitude(0.9);
+    delay(250 * (pattern[i] + 1));
+    wave_form.amplitude(0);
+    delay(250);
+  }
 }
 
 
 void
 error(int code)
 {
+  /*
+   * 100: General Errors
+   * 200: 
+   * 300: 
+   * 400: SD Card Errors
+   */
 
+  /* Full SD Card */
+  if (code == 401)
+  {
+    int beep_sequence[] = {1,0,0,1};
+    play_error_tone(beep_sequence);
+  }
 }
 
 
@@ -388,8 +410,6 @@ record_audio(File *file, AudioRecordQueue *audio_queue)
   }
 
 }
-
-
 
 
 void
