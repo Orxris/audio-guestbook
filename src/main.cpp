@@ -332,7 +332,7 @@ void
 empty_queue(File *file)
 {
   while (mic_audio_queue.available() > 0) {
-    file->write((byte*)mic_audio_queue.readBuffer(), 256);
+    file->write(mic_audio_queue.readBuffer(), 256);
     mic_audio_queue.freeBuffer();
   }
 }
