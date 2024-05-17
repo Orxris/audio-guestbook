@@ -61,6 +61,7 @@ AudioOutputI2S        I2S_output;
 AudioConnection       patchCord1(sine_wave, 0, mixer, 0);
 AudioConnection       patchCord4(mixer, 0, I2S_output, 0);
 AudioConnection       patchCord5(I2S_input, 0, mic_audio_queue,0);
+
 AudioControlSGTL5000  sgt15000;
 
 /* I've got no idea what the stuff above is doing
@@ -168,7 +169,7 @@ error(int code)
   /* Full SD Card */
   if (code == 9)
   {
-    int beep_sequence[] = {1,0,0,1};
+    int beep_sequence[4] = {1,0,0,1};
     play_error_tone(beep_sequence);
   }
 }
@@ -225,7 +226,7 @@ setup_sd_card ()
   while (!(SD.begin(SDCARD_CS_PIN))) 
   {
     Serial.println("Unable to access the SD Card");
-
+    
     /* Flash the Setup LED to indicate there's an issue with the phone. */
     digitalWrite(SETUP_LED, HIGH);
     delay(500);
