@@ -91,18 +91,66 @@ Mode mode = Mode::Initialising;
 
 
 void
+beep(
+  AudioSynthWaveform *wave_form,
+  float beep_volume,
+  int beep_duration,
+  float pause_volume,
+  int pause_duration
+)
+{
+  wave_form->amplitude(beep_volume);
+  delay(beep_duration);
+
+  wave_form->amplitude(pause_volume);
+  delay(pause_duration);
+}
+
+
+void
+info_beep(AudioSynthWaveform *waveform)
+{
+  beep(
+    waveform,
+    0.9,
+    250,
+    0,
+    250
+  );
+}
+
+
+void
+variable_duration_beep(
+  AudioSynthWaveform *waveform,
+  int beep_duration,
+  int pause_duration
+)
+{
+  beep(
+    waveform,
+    0.9,
+    beep_duration,
+    0,
+    pause_duration
+  );
+}
+
+
+void
 play_error_tone(int pattern[4])
 {
   /* pattern is an array of 0s and 1s, where a 1 represents a long beep
    * and 0 a short beep.
    */
-  AudioSynthWaveform wave_form;
+  AudioSynthWaveform *wave_form;
   for (int i=0; i<4;i++)
   {
-    wave_form.amplitude(0.9);
-    delay(250 * (pattern[i] + 1));
-    wave_form.amplitude(0);
-    delay(250);
+    variable_duration_beep(
+      wave_form,
+      250 * (pattern[i] + 1),
+      250
+    );
   }
 }
 
@@ -111,14 +159,14 @@ void
 error(int code)
 {
   /*
-   * 100: General Errors
-   * 200: 
-   * 300: 
-   * 400: SD Card Errors
+   *  : 
+   *  : 
+   *  : 
+   * 9: Full SD Card
    */
 
   /* Full SD Card */
-  if (code == 401)
+  if (code == 9)
   {
     int beep_sequence[] = {1,0,0,1};
     play_error_tone(beep_sequence);
@@ -202,19 +250,6 @@ setup_sgt15000 (AudioControlSGTL5000 *audio_codec)
 
 
 void
-beep (AudioSynthWaveform *wave_form)
-{
-  wave_form->amplitude(0.9);
-  Serial.println("Waiting 250...");
-  delay(250);
-  Serial.println("Setting Amplitude 0...");
-  wave_form->amplitude(0);
-  Serial.println("Waiting 250...");
-  delay(250);
-}
-
-
-void
 play_start_tone(AudioSynthWaveform *wave_form)
 {
   for (int i=0;i<4;i++) {
@@ -224,9 +259,10 @@ play_start_tone(AudioSynthWaveform *wave_form)
     else {
       wave_form->frequency(440);
     }
-    beep(wave_form);
+    info_beep(wave_form);
   }
 }
+
 
 void
 play_end_tone(AudioSynthWaveform *wave_form)
@@ -238,7 +274,7 @@ play_end_tone(AudioSynthWaveform *wave_form)
     else {
       wave_form->frequency(880);
     }
-    beep(wave_form);
+    info_beep(wave_form);
   }
 }
 
@@ -298,30 +334,30 @@ wait(unsigned int milliseconds)
 
 
 File
-*start_recording(File *file)
+*start_recording(File *file, AudioRecordQueue *queue)
 {
   Serial.printf("Recording to %s.\n", file->name());
   Serial.println("Changing Mode to Recording...");
   mode = Mode::Recording;
   digitalWrite(RECORDING_LED, HIGH);
-  mic_audio_queue.begin();
+  queue->begin();
 }
 
 
 void
-continue_recording(File *file)
+continue_recording(File *file, AudioRecordQueue *queue)
 {
-  if (mic_audio_queue.available() >= 16) {
+  if (queue->available() >= 16) {
     /* Serial.println("mic_audio_queue.Available >= 2"); */
     byte buffer[512];
 
     /* TODO: Find out why this is split into two 256 chunks instead of one
      * 512 chunk.
      */
-    memcpy(buffer, mic_audio_queue.readBuffer(), 256);
-    mic_audio_queue.freeBuffer();
-    memcpy(buffer+256, mic_audio_queue.readBuffer(), 256);
-    mic_audio_queue.freeBuffer();
+    memcpy(buffer, queue->readBuffer(), 256);
+    queue->freeBuffer();
+    memcpy(buffer+256, queue->readBuffer(), 256);
+    queue->freeBuffer();
 
     file->write(buffer, sizeof(buffer));
   }
@@ -329,11 +365,11 @@ continue_recording(File *file)
 
 
 void
-empty_queue(File *file)
+empty_queue(File *file, AudioRecordQueue *queue)
 {
-  while (mic_audio_queue.available() > 0) {
-    file->write(mic_audio_queue.readBuffer(), 256);
-    mic_audio_queue.freeBuffer();
+  while (queue->available() > 0) {
+    file->write(queue->readBuffer(), 256);
+    queue->freeBuffer();
   }
 }
 
@@ -352,7 +388,7 @@ stop_recording(File *file)
   mic_audio_queue.end();
   
   Serial.printf("Bytes remaining in Queue: %d", mic_audio_queue.available());
-  empty_queue(file);
+  empty_queue(file, &mic_audio_queue);
   Serial.println("Writing Finished.");
   
   file->close();
@@ -411,7 +447,7 @@ record_audio(File *file, AudioRecordQueue *audio_queue)
 
 }
 
-
+/* The Teensy calls the setup function once prior to calling the loop function */
 void
 setup ()
 {
@@ -442,7 +478,7 @@ setup ()
   Serial.println("Finished Setup.");
 }
 
-
+/* The teensy will call the loop function indefinitely until it loses power */
 void
 loop()
 {
@@ -476,7 +512,7 @@ loop()
       Serial.println("Starting Recording");
       file = get_next_file();
       play_start_tone(&sine_wave);
-      start_recording(file);
+      start_recording(file, &mic_audio_queue);
       break;
 
     case Mode::Recording:
@@ -487,7 +523,7 @@ loop()
         play_end_tone(&sine_wave);
       }
       else {
-        continue_recording(file);
+        continue_recording(file, &mic_audio_queue);
       }
       break;
 
