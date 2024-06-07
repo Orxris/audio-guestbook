@@ -108,6 +108,9 @@ beep(
 }
 
 
+/*
+ * A single beep of constant duration.
+ */
 void
 info_beep(AudioSynthWaveform *waveform)
 {
@@ -120,7 +123,10 @@ info_beep(AudioSynthWaveform *waveform)
   );
 }
 
-
+/*
+ * A single beep, but the duration of beep and following pause
+ * can be modified.
+ */
 void
 variable_duration_beep(
   AudioSynthWaveform *waveform,
